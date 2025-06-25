@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Live Football Headlines</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin:0; padding:10px; }
+    .item { margin-bottom:15px; padding:10px; background:#fff; border-radius:5px; }
+    .item a { color:#0366d6; text-decoration:none; font-weight:600; }
+    .time { color:#555; font-size:12px; margin-top:5px; }
+  </style>
+</head>
+<body>
+  <h2>Live Football Updates</h2>
+  <div id="feed"></div>
+  <script>
+    const feedUrl = 'https://cors-anywhere.herokuapp.com/http://feeds.bbci.co.uk/sport/football/rss.xml';
+    async function loadFeed() {
+      try {
+        const res = await fetch(feedUrl);
+        const text = await res.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, 'application/xml');
+        const items = xml.querySelectorAll('item');
+        let html = '';
+        items.forEach((it, idx) => {
+          if (idx >= 5) return;
+          const title = it.querySelector('title').textContent;
+          const link = it.querySelector('link').textContent;
+          const pubDate = new Date(it.querySelector('pubDate').textContent).toLocaleTimeString();
+          html += `<div class="item"><a href="${link}" target="_blank">${title}</a><div class="time">${pubDate}</div></div>`;
+        });
+        document.getElementById('feed').innerHTML = html;
+      } catch (err) {
+        document.getElementById('feed').innerHTML = '<p>Error loading feed</p>';
+      }
+    }
+    loadFeed();
+    setInterval(loadFeed, 60 * 1000);
+  </script>
+</body>
+</html>

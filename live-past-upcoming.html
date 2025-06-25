@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Football Scores - Live, Past, Upcoming</title>
+  <style>
+    body { margin:0; font-family:Arial,sans-serif; background:#111; color:#fff; }
+    .tabs { display:flex; background:#222; justify-content:center; padding:10px 0; }
+    .tab { padding:10px 20px; cursor:pointer; border-radius:4px; background:#333; margin:0 5px; color:#ccc; }
+    .tab.active { background:#e91e63; color:#fff; }
+    .section { display:none; padding:16px; }
+    .section.active { display:block; }
+    .match { border-bottom:1px solid #333; padding:10px 0; }
+    .team { font-weight:bold; color:#90caf9; }
+    .score { margin:0 6px; color:#00e676; }
+    .info { color:#bbb; font-size:13px; }
+  </style>
+</head>
+<body>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('live')">Live</div>
+    <div class="tab" onclick="switchTab('past')">Past</div>
+    <div class="tab" onclick="switchTab('upcoming')">Upcoming</div>
+  </div>
+
+  <div id="live" class="section active"><div>Loading Live Matches…</div></div>
+  <div id="past" class="section"><div>Loading Past Matches…</div></div>
+  <div id="upcoming" class="section">
+    <div class="match">
+      <span class="team">France</span>
+      <span class="score">vs</span>
+      <span class="team">Germany</span>
+      <div class="info">June 26, 2025 – 20:30</div>
+    </div>
+    <div class="match">
+      <span class="team">Brazil</span>
+      <span class="score">vs</span>
+      <span class="team">Argentina</span>
+      <div class="info">June 27, 2025 – 22:00</div>
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://www.scorebat.com/video-api/v3/';
+    const PROXY = 'https://api.allorigins.win/raw?url=';
+
+    const liveBox = document.getElementById('live');
+    const pastBox = document.getElementById('past');
+
+    function switchTab(id) {
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(id).classList.add('active');
+    }
+
+    async function loadMatches() {
+      try {
+        let res = await fetch(API);
+        if (!res.ok) res = await fetch(PROXY + encodeURIComponent(API));
+        const raw = await res.json();
+        const matches = (raw.response || raw || []).slice(0, 20);
+
+        liveBox.innerHTML = '';
+        pastBox.innerHTML = '';
+
+        let liveCount = 0;
+        let pastCount = 0;
+
+        const regex = /^(.*?)\s*[-–]\s*(.*?)\s+(\d+)\s*[-–]\s*(\d+)/;
+
+        matches.forEach(item => {
+          const title = item.title || '';
+          const date = new Date(item.date).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'short', day: 'numeric'
+          });
+          const m = title.match(regex);
+          if (m) {
+            const [, home, away, hScore, aScore] = m;
+            const matchHTML = `
+              <div class="match">
+                <span class="team">${home}</span>
+                <span class="score">${hScore}-${aScore}</span>
+                <span class="team">${away}</span>
+                <div class="info">${date}</div>
+              </div>`;
+            // use title or embed code for more info
+            if (item.side1 && item.side2 && item.embed) {
+              if (item.title.includes('Live') || item.embed.includes('stream')) {
+                liveBox.innerHTML += matchHTML;
+                liveCount++;
+              } else {
+                pastBox.innerHTML += matchHTML;
+                pastCount++;
+              }
+            }
+          }
+        });
+
+        if (liveCount === 0) {
+          liveBox.innerHTML = '<p class="info">No live matches currently ⚽</p>';
+        }
+        if (pastCount === 0) {
+          pastBox.innerHTML = '<p class="info">No past matches found.</p>';
+        }
+
+      } catch (err) {
+        console.error(err);
+        liveBox.innerHTML = '<p class="info">Failed to load live matches.</p>';
+        pastBox.innerHTML = '<p class="info">Failed to load past matches.</p>';
+      }
+    }
+
+    loadMatches();
+    setInterval(loadMatches, 60000); // refresh every 60 sec
+  </script>
+</body>
+</html>
